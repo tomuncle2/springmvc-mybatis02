@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.itheima.springmvc.dao.MyUserMapper">
+<select id="getList" parameterType="String" resultType="com.itheima.springmvc.pojo.User">
+select * from user where username like "${value}%"
+</select>
+
+<select id="getUserById" parameterType="Integer" resultType="com.itheima.springmvc.pojo.User">
+select * from user where id =#{d}
+</select>
+
+
+<insert id="save" parameterType="user" >
+insert into user (id,birthday,address,sex,username)
+values(#{id},#{birthday},#{address},#{sex},#{username})
+</insert>
+
+<insert id="saves" parameterType="user" >
+insert into user (birthday,address,sex,username) values
+	<foreach collection="listUser" item="ur" index="index" separator=",">
+		(#{ur.birthday},#{ur.address},#{ur.sex},#{ur.username})
+	</foreach>
+</insert>
+
+
+<select id="totalUser" resultType="long">
+select count(*) from user;
+</select>
+
+<!--Order里面含有User  -->
+<resultMap type="com.itheima.springmvc.pojo.Order" id="orderResultMap">
+<id property="id" column="id"/>
+<result property="userId" column="user_id"/>
+<result property="number" column="number"/>
+<result property="createtime" column="createtime"/>
+<result property="note" column="note"/>
+<!-- association ：配置一对一属性 -->
+	<!-- property:order里面的User属性名 -->
+	<!-- javaType:属性类型 -->
+	
+<association property="user" javaType="com.itheima.springmvc.pojo.User">
+<!-- id:声明主键，表示user_id是关联查询对象的唯一标识-->
+<id property="id" column="user_id"/>
+<result property="username" column="username"/>
+<result property="address" column="address"/>
+</association>
+
+</resultMap>
+
+<!--  -->
+<select id="getOrderList" resultMap="orderResultMap">
+select * from orders;
+</select>
+
+<!--  -->
+<select id="getOrderUserList" resultMap="orderResultMap">
+select o.*,u.username,u.address from orders o 
+left join 
+user u 
+on o.user_id = u.id
+</select>
+
+
+<!-- 一对一关联查询 查询所有订单信息关联用户信息 OrderUser继承User-->
+<select id="queryOrderUser" resultType="com.itheima.springmvc.pojo.OrderUser">
+select o.*,u.username,u.address from orders o 
+left join 
+user u 
+on o.user_id = u.id
+</select>
+
+<!-- 一对多查询 -->
+<resultMap type="com.itheima.springmvc.pojo.MyUser" id="myUserresultMap">
+<id column="id" property="id"/>
+<result column="username" property="username"/>
+<result column="address" property="address"/>
+<result column="sex" property="sex"/>
+<result column="birthday" property="birthday"/>
+
+<collection property="orders" column="oid" ofType="com.itheima.springmvc.pojo.MyOrder">
+<result column="number" property="number"/>
+<result column="createtime" property="createtime"/>
+<result column="note" property="note"/>
+</collection>
+</resultMap>
+
+<select id="queryMyUserMyOrder"  resultMap="myUserresultMap">
+select u.id,u.username,u.sex,u.birthday,u.address,o.id oid,o.number,o.createtime,o.note
+from user u left join orders  o on u.id = o.user_id
+
+</select>
+
+<insert id="saveReturnId" parameterType="com.itheima.springmvc.pojo.User" >
+
+<!-- selectKey 标签实现主键返回 -->
+	<!-- keyColumn:主键对应的表中的哪一列 -->
+	<!-- keyProperty：主键对应的pojo中的哪一个属性 -->
+	<!-- order：设置在执行insert语句前执行查询id的sql，还是在执行insert语句之后执行查询id的sql 
+	mysql 主键Integer 自己增长 AFTER
+	ORACLE  或者mysql主键为uuid BEFORE  大小写敏感
+	-->
+	<!-- resultType：设置返回的id的类型 -->
+
+<selectKey  keyColumn="id" keyProperty="id" resultType="Integer" order="BEFORE">
+SELECT LAST_INSERT_ID()
+</selectKey>
+insert into user(birthday,address,sex,username)
+values(#{birthday},#{address},#{sex},#{username})
+</insert>
+
+<!-- 输入MyQueryVo里面含有User -->
+<select id="getListByVo" parameterType="com.itheima.springmvc.pojo.MyQueryVo" resultType="user">
+select * from user where username like "%${user.username}%"
+</select>
+
+<!-- 多条件查询 -->
+<select id="queryWhereUser" parameterType="user" resultType="user">
+select * from user
+<where>
+<if test="sex !=null and sex !=''">
+AND sex = #{sex}
+</if>
+<if test="username !=null and username !=''">
+AND username like "%${username}%"
+</if>
+
+</where>
+</select>
+
+
+<!-- 输入map -->
+<select id="queryByMap" resultType="user" parameterType="HashMap">
+select * from user where username like "%${username}%" 
+
+</select>
+
+
+<select id="queryByMaps" resultType="user" parameterType="HashMap">
+select * from user 
+<where>
+<if test="name !=null and name !=''">
+and username like "%${name}%"
+</if>
+<if test="sex !=null and sex !=''">
+and sex = #{sex}
+</if>
+<if test="id !=null and id!=''">
+and id =#{id}
+</if>
+</where> 
+
+</select>
+
+<!-- choose满足最前面一个条件后就不会再满足其他条件了  即使有多个条件同时满足-->
+ <select id="queryChoose" parameterType="hashmap" resultType="user">
+ select * from user 
+ <where>
+	 <choose>
+	 	<when test="username !=null and username !=''">
+	 		and username like "%${username}%";
+	 	</when>
+	 	<when test="sex !=null and sex !=''">
+	 		and sex = #{sex,jdbcType=CHAR}
+	 	</when>
+	 	<otherwise>
+	 	and id =100
+	 	</otherwise>
+	 </choose>
+ </where>
+ </select>
+ 
+ 
+ <!--set会去掉多余的,号  比如最后的,号  -->
+ <update id="updateUsers" parameterType="map">
+ update user 
+ <set>
+ <if test="username!=null and username!=''">
+ username =#{username},
+ </if>
+ <if test="birthday!=null and birthday!=''">
+ birthday =#{birthday},
+ </if>
+ <if test="sex!=null and sex!=''">
+ sex =#{sex}
+ </if>
+ </set>
+ where id=100
+ </update>
+ 
+ 
+ <!-- prefix:在trim标签内sql语句加上前缀。
+suffix:在trim标签内sql语句加上后缀。
+suffixOverrides:指定去除多余的后缀内容，如：suffixOverrides=","，去除trim标签内sql语句多余的后缀","。
+prefixOverrides:指定去除多余的前缀内容 -->
+ <update id="updateUserTrim">
+ update user
+	 <trim prefix="set" suffixOverrides=",">
+	 	 <if test="username!=null and username!=''">
+		 username =#{username},
+		 </if>
+		 <if test="birthday!=null and birthday!=''">
+		 birthday =#{birthday},
+		 </if>
+		 <if test="sex!=null and sex!=''">
+		 sex =#{sex}
+ 		</if>
+	 </trim>
+ 		where id = 150
+ </update>
+
+<!-- 
+parameterType="Integer" resultType="user"   mybatis设置了简称  自动类型转换
+#{}表示一个占位符号，通过#{}可以实现preparedStatement向占位符中设置值，自动进行java类型和jdbc类型转换。#{}
+可以有效防止sql注入。 #{}可以接收简单类型值或pojo属性值。 如果parameterType传输单个简单类型值，#{}括号中可
+以是value或其它名称。
+
+${}表示拼接sql串，通过${}可以将parameterType 传入的内容拼接在sql中且不进行jdbc类型转换， ${}可以接收简单
+类型值或pojo属性值，如果parameterType传输单个简单类型值，${}括号中只能是value。
+
+ -->
+ 
+ 
+
+ 
+ </mapper>
